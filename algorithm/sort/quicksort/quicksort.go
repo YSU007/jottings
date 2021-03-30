@@ -18,17 +18,17 @@ func QuickSort1(arr []int, b, e int) {
 }
 
 func Partition1(arr []int, b, e int) int {
-	sentry := arr[b]
+	pivot := arr[b]
 	l, r := b, e
 	rTurn := true
 	for l != r {
 		if rTurn {
-			if arr[r] < sentry {
+			if arr[r] < pivot {
 				arr[l], arr[r] = arr[r], arr[l]
 				rTurn = false
 			}
 		} else {
-			if arr[l] > sentry {
+			if arr[l] > pivot {
 				arr[l], arr[r] = arr[r], arr[l]
 				rTurn = true
 			}
