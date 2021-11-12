@@ -25,6 +25,11 @@ type Interface interface {
 	HandleServe(ctx ContextInterface, req msg.ModeMsg, rsp msg.CodeMsg)
 }
 
+// Reset ----------------------------------------------------------------------------------------------------
+type Reset interface {
+	Reset()
+}
+
 // Instance ----------------------------------------------------------------------------------------------------
 var Instance Interface
 

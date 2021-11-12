@@ -17,7 +17,7 @@ func NewServer(network, address string) *Server {
 }
 
 func (s *Server) Serve() {
-	handler.Init(router.MappingRouterType)
+	handler.Init(router.ReflectRouterType)
 	s.sm.Start()
 }
 
