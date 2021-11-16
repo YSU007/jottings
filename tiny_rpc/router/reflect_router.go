@@ -48,28 +48,33 @@ func NewFuncHandle(fn interface{}) *funcHandle {
 }
 
 func (r *funcHandle) Serve(ctx ContextInterface, req msg.ModeMsg, rsp msg.CodeMsg) {
-	argv := reflectTypePools.Get(r.ArgType)
-	defer reflectTypePools.Put(r.ArgType, argv)
-	replyv := reflectTypePools.Get(r.ReplyType)
-	defer reflectTypePools.Put(r.ReplyType, replyv)
+	argi := reflectTypePools.Get(r.ArgType)
+	defer reflectTypePools.Put(r.ArgType, argi)
+	replyi := reflectTypePools.Get(r.ReplyType)
+	defer reflectTypePools.Put(r.ReplyType, replyi)
 
 	// req unmarshal
-	if err := msg.Unmarshal(req.GetData(), argv); err != nil {
+	if err := msg.Unmarshal(req.GetData(), argi); err != nil {
 		log.Error("funcHandle Serve Unmarshal err %v", err)
 		return
 	}
 
+	//todo strings.Builder{}
+	var tempStr string
+	argv := reflect.ValueOf(argi)
+	replyv := reflect.ValueOf(replyi)
 	var a, ok = ctx.(model.AccountI)
-	if ok {
-		log.Debug("account %v mode %v request %+v", a.ID(), req.GetMode(), argv)
+	if ok && r.ArgType.Kind() == reflect.Ptr {
+		tempStr += fmt.Sprintf("account %v mode %v request %+v", a.ID(), req.GetMode(), argv.Elem())
 	}
-	code := r.call(ctx, reflect.ValueOf(argv), reflect.ValueOf(replyv))
-	if ok {
-		log.Debug("account %v code %v request %+v", a.ID(), code, replyv)
+	var code = r.call(ctx, argv, replyv)
+	if ok && r.ReplyType.Kind() == reflect.Ptr {
+		tempStr += fmt.Sprintf(" code %v request %+v", code, replyv.Elem())
+		log.Debug(tempStr)
 	}
 
 	// rsp marshal
-	var data, err = msg.Marshal(replyv)
+	var data, err = msg.Marshal(replyi)
 	if err != nil {
 		log.Error("funcHandle Serve Marshal err %v", err)
 		return

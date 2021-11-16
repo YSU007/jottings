@@ -15,7 +15,7 @@ const (
 )
 
 func main() {
-	log.SetDefLog(log.FmtLog{})
+	log.SetDefLog(log.Logrus{})
 	log.Info("Start..")
 	defer log.Info("Stop..")
 	msg.SetSerializer(msg.SerializerJson)

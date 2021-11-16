@@ -50,6 +50,9 @@ func (s *Session) start() {
 		}
 	})
 
+	//db load
+	s.Account = &model.PlayerAccount{AccountId: "zhang"}
+
 	//work handle
 	s.handle()
 }
@@ -77,10 +80,9 @@ func (s *Session) handle() {
 
 func (s *Session) handleRPC(baseReq *msg.RequestBase) {
 	var baseRsp = new(msg.ResponseBase)
-	var a = &model.PlayerAccount{AccountId: "zhang"}
 
 	// serve handle
-	router.HandleServe(a, baseReq, baseRsp)
+	router.HandleServe(s.Account, baseReq, baseRsp)
 
 	var err = baseRsp.Encode(s)
 	if err != nil {

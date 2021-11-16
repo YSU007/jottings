@@ -6,26 +6,27 @@ type Interface interface {
 	Debug(format string, a ...interface{})
 	Warn(format string, a ...interface{})
 	Error(format string, a ...interface{})
+	Fatal(format string, a ...interface{})
 }
 
-var DefLog Interface
+var defLog Interface
 
 func SetDefLog(log Interface) {
-	DefLog = log
+	defLog = log
 }
 
 func Info(format string, a ...interface{}) {
-	DefLog.Info(format, a...)
+	defLog.Info(format, a...)
 }
 
 func Debug(format string, a ...interface{}) {
-	DefLog.Debug(format, a...)
+	defLog.Debug(format, a...)
 }
 
 func Warn(format string, a ...interface{}) {
-	DefLog.Warn(format, a...)
+	defLog.Warn(format, a...)
 }
 
 func Error(format string, a ...interface{}) {
-	DefLog.Error(format, a...)
+	defLog.Error(format, a...)
 }

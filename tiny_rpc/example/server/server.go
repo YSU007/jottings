@@ -12,7 +12,7 @@ const (
 )
 
 func main() {
-	log.SetDefLog(log.FmtLog{})
+	log.SetDefLog(log.Logrus{})
 	log.Info("Start..")
 	defer log.Info("Stop..")
 	var ser = server.NewServer(network, address)
