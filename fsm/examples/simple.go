@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 
-	"github.com/looplab/fsm"
+	"jottings/fsm"
 )
 
 func main() {

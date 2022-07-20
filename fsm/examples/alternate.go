@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+
+	"jottings/fsm"
 )
 
 func main() {
