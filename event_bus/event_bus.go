@@ -63,6 +63,7 @@ type EventSubscriber struct {
 	subscriber string
 	eventBus   IEventBus
 	handle     map[string]IEventHandle
+	handleLock sync.RWMutex
 }
 
 func (es *EventSubscriber) Init(name string, bus IEventBus, events ...IEventHandle) {
@@ -83,12 +84,16 @@ func (es *EventSubscriber) Subscriber() string {
 }
 
 func (es *EventSubscriber) Subscribe(events ...IEventHandle) {
-	if es.eventBus == nil {
+	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
 	for _, event := range events {
 		es.eventBus.Register(es, event)
-		es.handle[event.EventName()] = event
+		func() {
+			es.handleLock.Lock()
+			defer es.handleLock.Unlock()
+			es.handle[event.EventName()] = event
+		}()
 	}
 }
 
@@ -103,7 +108,12 @@ func (es *EventSubscriber) OnEvent(event IEventIns) {
 	if es.handle == nil {
 		return
 	}
-	handle := es.handle[event.EventName()]
+	var handle IEventHandle
+	func() {
+		es.handleLock.Lock()
+		defer es.handleLock.Unlock()
+		handle = es.handle[event.EventName()]
+	}()
 	if handle != nil {
 		handle.Handle(event)
 	}
@@ -156,24 +166,32 @@ func NewEventBusSingle() IEventBus {
 	}
 }
 
-type EventBusWithLock struct {
+type eventBusWithLock struct {
 	EventBus
 	lock sync.RWMutex
 }
 
-func (eb *EventBusWithLock) Register(sub IEventSubscriber, events ...IEvent) {
+func newEventBusWithLock() IEventBus {
+	return &eventBusWithLock{
+		EventBus: EventBus{
+			subscribers: make(map[string]map[string]IEventSubscriber),
+		},
+	}
+}
+
+func (eb *eventBusWithLock) Register(sub IEventSubscriber, events ...IEvent) {
 	eb.lock.Lock()
 	defer eb.lock.Unlock()
 	eb.EventBus.Register(sub, events...)
 }
 
-func (eb *EventBusWithLock) UnRegister(sub IEventSubscriber, events ...IEvent) {
+func (eb *eventBusWithLock) UnRegister(sub IEventSubscriber, events ...IEvent) {
 	eb.lock.Lock()
 	defer eb.lock.Unlock()
 	eb.EventBus.UnRegister(sub, events...)
 }
 
-func (eb *EventBusWithLock) Publish(events ...IEventIns) {
+func (eb *eventBusWithLock) Publish(events ...IEventIns) {
 	eb.lock.RLock()
 	defer eb.lock.RUnlock()
 	eb.EventBus.Publish(events...)
@@ -188,7 +206,7 @@ func NewEventBusBucket(bucketNum int) IEventBus {
 		buckets: make([]IEventBus, bucketNum),
 	}
 	for i := 0; i < bucketNum; i++ {
-		eb.buckets[i] = NewEventBusSingle()
+		eb.buckets[i] = newEventBusWithLock()
 	}
 	return eb
 }

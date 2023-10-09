@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 )
 
 type TestPublisher struct {
@@ -44,14 +45,18 @@ func TestEventBusSingle(t *testing.T) {
 }
 
 func TestEventBusBucket(t *testing.T) {
-	testEvent := Event{name: "TestEvent"}
-
 	bus := NewEventBus(Bucket)
-	p := NewTestPublisher(bus)
-	s := NewTestSubscriber("TestSubscriber", bus, &EventHandle{testEvent, EventHandle1})
-	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV1")))
-	s.UnSubscribe(&testEvent)
-	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
-	s.Subscribe(&EventHandle{testEvent, EventHandle1})
-	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+	s := NewTestSubscriber("TestSubscriber", bus)
+	_ = s
+	for i := 0; i < 100; i++ {
+		j := i
+		testEvent := Event{name: fmt.Sprint("TestEvent", j)}
+		s.Subscribe(&EventHandle{testEvent, EventHandle1})
+		go func() {
+			p := NewTestPublisher(bus)
+			p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV1")))
+			p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+		}()
+	}
+	time.Sleep(time.Second)
 }
