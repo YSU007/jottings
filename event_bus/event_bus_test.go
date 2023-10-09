@@ -42,3 +42,16 @@ func TestEventBusSingle(t *testing.T) {
 	s.Subscribe(&EventHandle{testEvent, EventHandle1})
 	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
 }
+
+func TestEventBusBucket(t *testing.T) {
+	testEvent := Event{name: "TestEvent"}
+
+	bus := NewEventBus(Bucket)
+	p := NewTestPublisher(bus)
+	s := NewTestSubscriber("TestSubscriber", bus, &EventHandle{testEvent, EventHandle1})
+	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV1")))
+	s.UnSubscribe(&testEvent)
+	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+	s.Subscribe(&EventHandle{testEvent, EventHandle1})
+	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+}

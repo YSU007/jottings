@@ -212,7 +212,7 @@ func (eb *EventBusBucket) Publish(events ...IEventIns) {
 	}
 	eb.hashInvoke(func(bus IEventBus, event IEvent) {
 		eventIns, ok := event.(IEventIns)
-		if ok {
+		if !ok {
 			return
 		}
 		bus.Publish(eventIns)
