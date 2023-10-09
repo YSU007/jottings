@@ -1,16 +1,36 @@
 package event_bus
 
-type Event interface {
-	Name() string
-	IntParam() []int64
-	StringParam() []string
+import "context"
+
+type IEventBus interface {
+	Register(sub IEventSubscriber, events ...IEvent)
+	UnRegister(sub IEventSubscriber, events ...IEvent)
+	Publish(events ...IEventIns)
 }
 
-type EventPublish interface {
-	PubEvent(event Event)
+type IEvent interface {
+	EventName() string
 }
 
-type EventSubscribe interface {
+type IEventIns interface {
+	IEvent
+	Context() context.Context
+}
+
+type IEventHandle interface {
+	IEvent
+	Handle(event IEventIns)
+}
+
+type IEventPublisher interface {
+	Init(bus IEventBus)
+	PubEvent(events ...IEventIns)
+}
+
+type IEventSubscriber interface {
+	Init(name string, bus IEventBus, events ...IEventHandle)
 	Subscriber() string
-	OnEvent(event Event)
+	Subscribe(events ...IEventHandle)
+	UnSubscribe(events ...IEvent)
+	OnEvent(event IEventIns)
 }
