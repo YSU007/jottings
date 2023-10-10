@@ -45,6 +45,12 @@ type EventPublisher struct {
 	eventBus IEventBus
 }
 
+func NewEventPublisher(bus IEventBus) IEventPublisher {
+	t := &EventPublisher{}
+	t.Init(bus)
+	return t
+}
+
 func (ep *EventPublisher) Init(bus IEventBus) {
 	if ep.eventBus != nil || bus == nil {
 		return
@@ -59,13 +65,13 @@ func (ep *EventPublisher) PubEvent(events ...IEventIns) {
 	ep.eventBus.Publish(events...)
 }
 
-type EventSubscriber struct {
+type eventSubscriber struct {
 	subscriber string
 	eventBus   IEventBus
 	handle     map[string]IEventHandle
 }
 
-func (es *EventSubscriber) Init(name string, bus IEventBus, events ...IEventHandle) {
+func (es *eventSubscriber) Init(name string, bus IEventBus, events ...IEventHandle) {
 	if es.subscriber != "" || name == "" {
 		return
 	}
@@ -78,11 +84,11 @@ func (es *EventSubscriber) Init(name string, bus IEventBus, events ...IEventHand
 	es.Subscribe(events...)
 }
 
-func (es *EventSubscriber) Subscriber() string {
+func (es *eventSubscriber) Subscriber() string {
 	return es.subscriber
 }
 
-func (es *EventSubscriber) Subscribe(events ...IEventHandle) {
+func (es *eventSubscriber) Subscribe(events ...IEventHandle) {
 	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
@@ -92,14 +98,14 @@ func (es *EventSubscriber) Subscribe(events ...IEventHandle) {
 	}
 }
 
-func (es *EventSubscriber) UnSubscribe(events ...IEvent) {
+func (es *eventSubscriber) UnSubscribe(events ...IEvent) {
 	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
 	es.eventBus.UnRegister(es, events...)
 }
 
-func (es *EventSubscriber) OnEvent(event IEventIns) {
+func (es *eventSubscriber) OnEvent(event IEventIns) {
 	if es.handle == nil {
 		return
 	}
@@ -110,17 +116,17 @@ func (es *EventSubscriber) OnEvent(event IEventIns) {
 }
 
 type EventSubscriberSingle struct {
-	EventSubscriber
+	eventSubscriber
 }
 
 func NewEventSubscriberSingle(name string, bus IEventBus, events ...IEventHandle) IEventSubscriber {
-	t := &EventSubscriberSingle{}
-	t.Init(name, bus, events...)
-	return t
+	e := &EventSubscriberSingle{}
+	e.Init(name, bus, events...)
+	return e
 }
 
 type EventSubscriberSafety struct {
-	EventSubscriber
+	eventSubscriber
 	handleLock sync.RWMutex
 }
 
@@ -166,22 +172,28 @@ func (es *EventSubscriberSafety) OnEvent(event IEventIns) {
 	}
 }
 
-type EventBus struct {
+type eventBus struct {
 	subscribers map[string]map[string]IEventSubscriber // event name -> subscriber name -> subscriber
 }
 
-func (eb *EventBus) Register(sub IEventSubscriber, events ...IEvent) {
+func newEventBus() IEventBus {
+	return &eventBus{
+		subscribers: make(map[string]map[string]IEventSubscriber, 128),
+	}
+}
+
+func (eb *eventBus) Register(sub IEventSubscriber, events ...IEvent) {
 	for _, event := range events {
 		subs := eb.subscribers[event.EventName()]
 		if subs == nil {
-			subs = make(map[string]IEventSubscriber)
+			subs = make(map[string]IEventSubscriber, 128)
 		}
 		subs[sub.Subscriber()] = sub
 		eb.subscribers[event.EventName()] = subs
 	}
 }
 
-func (eb *EventBus) UnRegister(sub IEventSubscriber, events ...IEvent) {
+func (eb *eventBus) UnRegister(sub IEventSubscriber, events ...IEvent) {
 	for _, event := range events {
 		subs := eb.subscribers[event.EventName()]
 		if subs != nil {
@@ -190,7 +202,7 @@ func (eb *EventBus) UnRegister(sub IEventSubscriber, events ...IEvent) {
 	}
 }
 
-func (eb *EventBus) Publish(events ...IEventIns) {
+func (eb *eventBus) Publish(events ...IEventIns) {
 	for _, event := range events {
 		subs := eb.subscribers[event.EventName()]
 		if subs != nil {
@@ -202,46 +214,42 @@ func (eb *EventBus) Publish(events ...IEventIns) {
 }
 
 type EventBusSingle struct {
-	EventBus
+	IEventBus
 }
 
 func NewEventBusSingle() IEventBus {
 	return &EventBusSingle{
-		EventBus: EventBus{
-			subscribers: make(map[string]map[string]IEventSubscriber),
-		},
+		IEventBus: newEventBus(),
 	}
 }
 
 type eventBusWithLock struct {
-	EventBus
+	IEventBus
 	lock sync.RWMutex
 }
 
 func newEventBusWithLock() IEventBus {
 	return &eventBusWithLock{
-		EventBus: EventBus{
-			subscribers: make(map[string]map[string]IEventSubscriber),
-		},
+		IEventBus: newEventBus(),
 	}
 }
 
 func (eb *eventBusWithLock) Register(sub IEventSubscriber, events ...IEvent) {
 	eb.lock.Lock()
 	defer eb.lock.Unlock()
-	eb.EventBus.Register(sub, events...)
+	eb.IEventBus.Register(sub, events...)
 }
 
 func (eb *eventBusWithLock) UnRegister(sub IEventSubscriber, events ...IEvent) {
 	eb.lock.Lock()
 	defer eb.lock.Unlock()
-	eb.EventBus.UnRegister(sub, events...)
+	eb.IEventBus.UnRegister(sub, events...)
 }
 
 func (eb *eventBusWithLock) Publish(events ...IEventIns) {
 	eb.lock.RLock()
 	defer eb.lock.RUnlock()
-	eb.EventBus.Publish(events...)
+	eb.IEventBus.Publish(events...)
 }
 
 type EventBusSafety struct {
