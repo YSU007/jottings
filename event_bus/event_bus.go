@@ -63,7 +63,6 @@ type EventSubscriber struct {
 	subscriber string
 	eventBus   IEventBus
 	handle     map[string]IEventHandle
-	handleLock sync.RWMutex
 }
 
 func (es *EventSubscriber) Init(name string, bus IEventBus, events ...IEventHandle) {
@@ -89,16 +88,12 @@ func (es *EventSubscriber) Subscribe(events ...IEventHandle) {
 	}
 	for _, event := range events {
 		es.eventBus.Register(es, event)
-		func() {
-			es.handleLock.Lock()
-			defer es.handleLock.Unlock()
-			es.handle[event.EventName()] = event
-		}()
+		es.handle[event.EventName()] = event
 	}
 }
 
 func (es *EventSubscriber) UnSubscribe(events ...IEvent) {
-	if es.eventBus == nil {
+	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
 	es.eventBus.UnRegister(es, events...)
@@ -108,12 +103,64 @@ func (es *EventSubscriber) OnEvent(event IEventIns) {
 	if es.handle == nil {
 		return
 	}
-	var handle IEventHandle
-	func() {
-		es.handleLock.Lock()
-		defer es.handleLock.Unlock()
-		handle = es.handle[event.EventName()]
-	}()
+	handle := es.handle[event.EventName()]
+	if handle != nil {
+		handle.Handle(event)
+	}
+}
+
+type EventSubscriberSingle struct {
+	EventSubscriber
+}
+
+func NewEventSubscriberSingle(name string, bus IEventBus, events ...IEventHandle) IEventSubscriber {
+	t := &EventSubscriberSingle{}
+	t.Init(name, bus, events...)
+	return t
+}
+
+type EventSubscriberSafety struct {
+	EventSubscriber
+	handleLock sync.RWMutex
+}
+
+func NewEventSubscriberSafety(name string, bus IEventBus, events ...IEventHandle) IEventSubscriber {
+	e := &EventSubscriberSafety{}
+	e.Init(name, bus, events...)
+	return e
+}
+
+func (es *EventSubscriberSafety) Subscribe(events ...IEventHandle) {
+	if es.eventBus == nil || len(events) == 0 {
+		return
+	}
+	es.handleLock.Lock()
+	defer es.handleLock.Unlock()
+	for _, event := range events {
+		es.eventBus.Register(es, event)
+		es.handle[event.EventName()] = event
+	}
+}
+
+func (es *EventSubscriberSafety) UnSubscribe(events ...IEvent) {
+	if es.eventBus == nil || len(events) == 0 {
+		return
+	}
+	es.handleLock.Lock()
+	defer es.handleLock.Unlock()
+	es.eventBus.UnRegister(es, events...)
+	for _, event := range events {
+		delete(es.handle, event.EventName())
+	}
+}
+
+func (es *EventSubscriberSafety) OnEvent(event IEventIns) {
+	if es.handle == nil {
+		return
+	}
+	es.handleLock.RLock()
+	defer es.handleLock.RUnlock()
+	handle := es.handle[event.EventName()]
 	if handle != nil {
 		handle.Handle(event)
 	}
@@ -197,12 +244,12 @@ func (eb *eventBusWithLock) Publish(events ...IEventIns) {
 	eb.EventBus.Publish(events...)
 }
 
-type EventBusBucket struct {
+type EventBusSafety struct {
 	buckets []IEventBus
 }
 
 func NewEventBusBucket(bucketNum int) IEventBus {
-	eb := &EventBusBucket{
+	eb := &EventBusSafety{
 		buckets: make([]IEventBus, bucketNum),
 	}
 	for i := 0; i < bucketNum; i++ {
@@ -211,19 +258,19 @@ func NewEventBusBucket(bucketNum int) IEventBus {
 	return eb
 }
 
-func (eb *EventBusBucket) Register(sub IEventSubscriber, events ...IEvent) {
+func (eb *EventBusSafety) Register(sub IEventSubscriber, events ...IEvent) {
 	eb.hashInvoke(func(bus IEventBus, event IEvent) {
 		bus.Register(sub, event)
 	}, events...)
 }
 
-func (eb *EventBusBucket) UnRegister(sub IEventSubscriber, events ...IEvent) {
+func (eb *EventBusSafety) UnRegister(sub IEventSubscriber, events ...IEvent) {
 	eb.hashInvoke(func(bus IEventBus, event IEvent) {
 		bus.UnRegister(sub, event)
 	}, events...)
 }
 
-func (eb *EventBusBucket) Publish(events ...IEventIns) {
+func (eb *EventBusSafety) Publish(events ...IEventIns) {
 	iEvents := make([]IEvent, len(events))
 	for i, event := range events {
 		iEvents[i] = event
@@ -237,7 +284,7 @@ func (eb *EventBusBucket) Publish(events ...IEventIns) {
 	}, iEvents...)
 }
 
-func (eb *EventBusBucket) hashInvoke(f func(IEventBus, IEvent), events ...IEvent) {
+func (eb *EventBusSafety) hashInvoke(f func(IEventBus, IEvent), events ...IEvent) {
 	for _, event := range events {
 		hash32a := fnv.New32a()
 		n, err := hash32a.Write([]byte(event.EventName()))
@@ -249,22 +296,4 @@ func (eb *EventBusBucket) hashInvoke(f func(IEventBus, IEvent), events ...IEvent
 		idx := int(hashValue) % len(eb.buckets)
 		f(eb.buckets[idx], event)
 	}
-}
-
-type EventBusType int
-
-const (
-	Single EventBusType = iota
-	Bucket
-)
-
-func NewEventBus(t EventBusType) IEventBus {
-	switch t {
-	case Single:
-		return NewEventBusSingle()
-	case Bucket:
-		const bucketNum = 32
-		return NewEventBusBucket(bucketNum)
-	}
-	return nil
 }

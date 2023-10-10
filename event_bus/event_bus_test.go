@@ -17,16 +17,6 @@ func NewTestPublisher(bus IEventBus) *TestPublisher {
 	return t
 }
 
-type TestSubscriber struct {
-	EventSubscriber
-}
-
-func NewTestSubscriber(name string, bus IEventBus, events ...IEventHandle) *TestSubscriber {
-	t := &TestSubscriber{}
-	t.Init(name, bus, events...)
-	return t
-}
-
 func EventHandle1(event IEventIns) {
 	fmt.Println("receive event", event.EventName(), event.Context().Value("testK"))
 }
@@ -34,9 +24,9 @@ func EventHandle1(event IEventIns) {
 func TestEventBusSingle(t *testing.T) {
 	testEvent := Event{name: "TestEvent"}
 
-	bus := NewEventBus(Single)
+	bus := NewEventBus(BusSingle)
 	p := NewTestPublisher(bus)
-	s := NewTestSubscriber("TestSubscriber", bus, &EventHandle{testEvent, EventHandle1})
+	s := NewEventSubscriber(SubscriberSingle, "TestSubscriber", bus, &EventHandle{testEvent, EventHandle1})
 	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV1")))
 	s.UnSubscribe(&testEvent)
 	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
@@ -44,10 +34,9 @@ func TestEventBusSingle(t *testing.T) {
 	p.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
 }
 
-func TestEventBusBucket(t *testing.T) {
-	bus := NewEventBus(Bucket)
-	s := NewTestSubscriber("TestSubscriber", bus)
-	_ = s
+func TestEventBusSafety(t *testing.T) {
+	bus := NewEventBus(BusSafety)
+	s := NewEventSubscriber(SubscriberSafety, "TestSubscriber", bus)
 	for i := 0; i < 100; i++ {
 		j := i
 		testEvent := Event{name: fmt.Sprint("TestEvent", j)}
