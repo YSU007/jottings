@@ -140,36 +140,44 @@ func (es *EventSubscriberSafety) Subscribe(events ...IEventHandle) {
 	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
-	es.handleLock.Lock()
-	defer es.handleLock.Unlock()
-	for _, event := range events {
-		es.eventBus.Register(es, event)
-		es.handle[event.EventName()] = event
-	}
+	var iEvents = make([]IEvent, 0, len(events))
+	func() {
+		es.handleLock.Lock()
+		defer es.handleLock.Unlock()
+		for _, event := range events {
+			es.handle[event.EventName()] = event
+			iEvents = append(iEvents, event)
+		}
+	}()
+	es.eventBus.Register(es, iEvents...)
 }
 
 func (es *EventSubscriberSafety) UnSubscribe(events ...IEvent) {
 	if es.eventBus == nil || len(events) == 0 {
 		return
 	}
-	es.handleLock.Lock()
-	defer es.handleLock.Unlock()
 	es.eventBus.UnRegister(es, events...)
-	for _, event := range events {
-		delete(es.handle, event.EventName())
-	}
+	func() {
+		es.handleLock.Lock()
+		defer es.handleLock.Unlock()
+		for _, event := range events {
+			delete(es.handle, event.EventName())
+		}
+	}()
 }
 
 func (es *EventSubscriberSafety) OnEvent(event IEventIns) {
 	if es.handle == nil {
 		return
 	}
-	es.handleLock.RLock()
-	defer es.handleLock.RUnlock()
-	handle := es.handle[event.EventName()]
-	if handle != nil {
-		handle.Handle(event)
-	}
+	func() {
+		es.handleLock.RLock()
+		defer es.handleLock.RUnlock()
+		handle := es.handle[event.EventName()]
+		if handle != nil {
+			handle.Handle(event)
+		}
+	}()
 }
 
 type eventBus struct {

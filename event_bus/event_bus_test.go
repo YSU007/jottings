@@ -43,10 +43,10 @@ func TestEventBusSafety(t *testing.T) {
 			go func() {
 				pub := NewEventPublisher(bus)
 				pub.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV1")))
-				// sub.UnSubscribe(&testEvent)
-				// pub.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
-				// sub.Subscribe(&EventHandle{testEvent, EventHandle1})
-				// pub.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+				sub.UnSubscribe(&testEvent)
+				pub.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
+				sub.Subscribe(&EventHandle{testEvent, EventHandle1})
+				pub.PubEvent(NewEventIns(testEvent, context.WithValue(context.Background(), "testK", "testV2")))
 			}()
 		}
 		time.Sleep(time.Second)
