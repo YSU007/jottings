@@ -3,9 +3,10 @@ package fsm
 import (
 	"bytes"
 	"fmt"
+	"sort"
 )
 
-// Visualize outputs a visualization of a FSM in Graphviz format.
+// Visualize outputs a visualization of FSM in Graphviz format.
 func Visualize(fsm *FSM) string {
 	var buf bytes.Buffer
 
@@ -49,4 +50,44 @@ func writeStates(buf *bytes.Buffer, current string, sortedStateKeys []string) {
 
 func writeFooter(buf *bytes.Buffer) {
 	buf.WriteString(fmt.Sprintln("}"))
+}
+
+func getSortedTransitionKeys(transitions map[eKey]string) []eKey {
+	// we sort the key alphabetically to have a reproducible graph output
+	sortedTransitionKeys := make([]eKey, 0)
+
+	for transition := range transitions {
+		sortedTransitionKeys = append(sortedTransitionKeys, transition)
+	}
+	sort.Slice(sortedTransitionKeys, func(i, j int) bool {
+		if sortedTransitionKeys[i].src == sortedTransitionKeys[j].src {
+			return sortedTransitionKeys[i].event < sortedTransitionKeys[j].event
+		}
+		return sortedTransitionKeys[i].src < sortedTransitionKeys[j].src
+	})
+
+	return sortedTransitionKeys
+}
+
+func getSortedStates(transitions map[eKey]string) ([]string, map[string]string) {
+	statesToIDMap := make(map[string]string)
+	for transition, target := range transitions {
+		if _, ok := statesToIDMap[transition.src]; !ok {
+			statesToIDMap[transition.src] = ""
+		}
+		if _, ok := statesToIDMap[target]; !ok {
+			statesToIDMap[target] = ""
+		}
+	}
+
+	sortedStates := make([]string, 0, len(statesToIDMap))
+	for state := range statesToIDMap {
+		sortedStates = append(sortedStates, state)
+	}
+	sort.Strings(sortedStates)
+
+	for i, state := range sortedStates {
+		statesToIDMap[state] = fmt.Sprintf("id%d", i)
+	}
+	return sortedStates, statesToIDMap
 }
