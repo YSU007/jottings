@@ -5,14 +5,14 @@ import (
 	"sync"
 )
 
-// transitioner is an interface for the FSM's transition function.
+// transitioner 是FSM转换函数的接口。
 type transitioner interface {
 	transition(*FSM) error
 }
 
-// FSM is the state machine that holds the current state.
+// FSM 是保存当前状态的状态机。
 //
-// It has to be created with NewFSM to function properly.
+// 它必须使用 NewFSM 创建才能正常运行。
 type FSM struct {
 	// current is the state that the FSM is currently in.
 	current string
@@ -40,11 +40,10 @@ type FSM struct {
 	metadataMu sync.RWMutex
 }
 
-// EventDesc represents an event when initializing the FSM.
+// EventDesc 表示初始化 FSM 时的事件。
 //
-// The event can have one or more source states that is valid for performing
-// the transition. If the FSM is in one of the source states it will end up in
-// the specified destination state, calling all defined callbacks as it goes.
+// 该事件可以有一个或多个对执行有效的源状态过渡。
+// 如果 FSM 处于源状态之一，它将最终处于指定的目标状态，调用所有已定义的回调。
 type EventDesc struct {
 	// Name is the event name used when calling for a transition.
 	Name string
@@ -58,52 +57,47 @@ type EventDesc struct {
 	Dst string
 }
 
-// Callback is a function type that callbacks should use. Event is the current
-// event info as the callback happens.
+// Callback 是回调应该使用的函数类型。事件是当前的回调发生时的事件信息。
 type Callback func(*Event)
 
-// Events is a shorthand for defining the transition map in NewFSM.
+// Events 是 NewFSM 中定义转换映射的简写。
 type Events []EventDesc
 
-// Callbacks is a shorthand for defining the callbacks in NewFSM.
+// Callbacks 是 NewFSM 中定义回调的简写。
 type Callbacks map[string]Callback
 
-// NewFSM constructs a FSM from events and callbacks.
+// NewFSM 根据事件和回调构造 FSM。
 //
-// The events and transitions are specified as a slice of Event structs
-// specified as Events. Each Event is mapped to one or more internal
-// transitions from Event.Src to Event.Dst.
+// 事件和转换被指定为事件结构的切片指定为事件。
+// 每个事件都映射到一个或多个内部从Event.Src 转换到Event.Dst。
 //
-// Callbacks are added as a map specified as Callbacks where the key is parsed
-// as the callback event as follows, and called in the same order:
+// 回调被添加为指定为解析键的回调的映射作为回调事件如下，并以相同的顺序调用：
 //
-// 1. before_<EVENT> - called before event named <EVENT>
+// 1. before_<EVENT> - 在名为 <EVENT> 的事件之前调用
 //
-// 2. before_event - called before all events
+// 2. before_event - 在所有事件之前调用
 //
-// 3. leave_<OLD_STATE> - called before leaving <OLD_STATE>
+// 3.leave_<OLD_STATE> - 在离开<OLD_STATE>之前调用
 //
-// 4. leave_state - called before leaving all states
+// 4.leave_state - 在离开所有状态之前调用
 //
-// 5. enter_<NEW_STATE> - called after entering <NEW_STATE>
+// 5. Enter_<NEW_STATE> - 输入 <NEW_STATE> 后调用
 //
-// 6. enter_state - called after entering all states
+// 6. Enter_state - 进入所有状态后调用
 //
-// 7. after_<EVENT> - called after event named <EVENT>
+// 7. after_<EVENT> - 在名为 <EVENT> 的事件之后调用
 //
-// 8. after_event - called after all events
+// 8. after_event - 在所有事件之后调用
 //
-// There are also two short form versions for the most commonly used callbacks.
-// They are simply the name of the event or state:
+// 最常用的回调还有两个简短版本。
+// 它们只是事件或状态的名称：
 //
-// 1. <NEW_STATE> - called after entering <NEW_STATE>
+// 1. <NEW_STATE> - 进入<NEW_STATE>后调用
 //
-// 2. <EVENT> - called after event named <EVENT>
+// 2. <EVENT> - 在名为 <EVENT> 的事件之后调用
 //
-// If both a shorthand version and a full version is specified it is undefined
-// which version of the callback will end up in the internal map. This is due
-// to the pseudo random nature of Go maps. No checking for multiple keys is
-// currently performed.
+// 如果同时指定了简写版本和完整版本，则未定义哪个版本的回调将最终出现在内部映射中。
+// 这个到期了Go Map的伪随机性。不检查多个Key当前执行时。
 func NewFSM(initial string, events []EventDesc, callbacks map[string]Callback) *FSM {
 	f := &FSM{
 		transitionerObj: &transitionerStruct{},
@@ -245,23 +239,21 @@ func (f *FSM) SetMetadata(key string, dataValue interface{}) {
 	f.metadata[key] = dataValue
 }
 
-// Event initiates a state transition with the named event.
+// Event 使用指定事件启动状态转换。
 //
-// The call takes a variable number of arguments that will be passed to the
-// callback, if defined.
+// 该调用采用可变数量的参数，这些参数将传递给回调（如果已定义）。
 //
-// It will return nil if the state change is ok or one of these errors:
+// 如果状态更改正常或出现以下错误之一，它将返回 nil：
 //
-// - event X inappropriate because previous transition did not complete
+// - 事件 X 不合适，因为之前的转换未完成
 //
-// - event X inappropriate in current state Y
+// - 事件 X 在当前状态 Y 中不合适
 //
-// - event X does not exist
+// - 事件 X 不存在
 //
-// - internal error on state transition
+// - 状态转换时的内部错误
 //
-// The last error should never occur in this situation and is a sign of an
-// internal bug.
+// 在这种情况下，最后一个错误不应该发生，并且是内部错误的迹象。
 func (f *FSM) Event(event string, args ...interface{}) error {
 	f.eventMu.Lock()
 	defer f.eventMu.Unlock()
@@ -335,14 +327,12 @@ func (f *FSM) doTransition() error {
 	return f.transitionerObj.transition(f)
 }
 
-// transitionerStruct is the default implementation of the transitioner
-// interface. Other implementations can be swapped in for testing.
+// transitionerStruct 是 transitioner 接口的默认实现。可以交换其他实现来进行测试。
 type transitionerStruct struct{}
 
-// Transition completes an asynchronous state change.
+// transition 完成异步状态改变。
 //
-// The callback for leave_<STATE> must previously have called Async on its
-// event to have initiated an asynchronous state transition.
+// leave_<STATE> 的回调之前必须在其事件上调用 Async 才能启动异步状态转换。
 func (t transitionerStruct) transition(f *FSM) error {
 	if f.transition == nil {
 		return NotInTransitionError{}

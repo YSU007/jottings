@@ -1,35 +1,34 @@
 package fsm
 
-// Event is the info that get passed as a reference in the callbacks.
+// Event 是在回调中作为引用传递的信息。
 type Event struct {
-	// FSM is an reference to the current FSM.
+	// FSM 是对当前FSM的引用。
 	FSM *FSM
 
-	// Event is the event name.
+	// Event 是事件名称。
 	Event string
 
-	// Src is the state before the transition.
+	// Src 是转换前的状态。
 	Src string
 
-	// Dst is the state after the transition.
+	// Dst 是转换后的状态。
 	Dst string
 
-	// Err is an optional error that can be returned from a callback.
+	// Err 是可以从回调返回的可选错误。
 	Err error
 
-	// Args is an optional list of arguments passed to the callback.
+	// Args 是传递给回调的可选参数列表。
 	Args []interface{}
 
-	// canceled is an internal flag set if the transition is canceled.
+	// canceled 是一个内部标志，如果转换被取消则设置。
 	canceled bool
 
-	// async is an internal flag set if the transition should be asynchronous
+	// async 是一个内部标志设置，如果转换应该是异步的。
 	async bool
 }
 
-// Cancel can be called in before_<EVENT> or leave_<STATE> to cancel the
-// current transition before it happens. It takes an optional error, which will
-// overwrite e.Err if set before.
+// Cancel 可以在 before_<EVENT> 或 left_<STATE> 中调用以在当前转换发生之前取消当前转换。
+// 它需要一个可选的错误，如果之前设置过，它将覆盖 e.Err。
 func (e *Event) Cancel(err ...error) {
 	e.canceled = true
 
@@ -38,11 +37,11 @@ func (e *Event) Cancel(err ...error) {
 	}
 }
 
-// Async can be called in leave_<STATE> to do an asynchronous state transition.
+// Async 可以在leave_<STATE>中调用Async来进行异步状态转换。
 //
-// The current state transition will be on hold in the old state until a final
-// call to Transition is made. This will complete the transition and possibly
-// call the other callbacks.
+// 当前状态转换将保留在旧状态，直到最终状态转换
+// 调用 Transition。这将完成过渡，并可能
+// 调用其他回调。
 func (e *Event) Async() {
 	e.async = true
 }
