@@ -14,27 +14,26 @@ type transitioner interface {
 //
 // 它必须使用 NewFSM 创建才能正常运行。
 type FSM struct {
-	// current is the state that the FSM is currently in.
+	// current 当前所处状态。
 	current string
 
-	// transitions maps events and source states to destination states.
+	// transitions 将事件和源状态映射到目标状态。
 	transitions map[eKey]string
 
-	// callbacks maps events and targets to callback functions.
+	// callbacks 将事件和目标映射到回调函数。
 	callbacks map[cKey]Callback
 
-	// transition is the internal transition functions used either directly
-	// or when Transition is called in an asynchronous state transition.
+	// transition 是直接使用的内部转换函数或者在异步状态转换中调用转换时。
 	transition func()
-	// transitionerObj calls the FSM's transition() function.
+	// transitionerObj 调用状态机 transition() 方法。
 	transitionerObj transitioner
 
-	// stateMu guards access to the current state.
+	// stateMu 保护对当前状态的访问。
 	stateMu sync.RWMutex
-	// eventMu guards access to Event() and Transition().
+	// eventMu 保护对 Event() 和 Transition()的访问。
 	eventMu sync.Mutex
-	// metadata can be used to store and load data that maybe used across events
-	// use methods SetMetadata() and Metadata() to store and load data
+	// metadata 可用于存储和加载可能跨事件使用的数据
+	// 使用方法 SetMetadata() 和 Metadata() 来存储和加载数据
 	metadata map[string]interface{}
 
 	metadataMu sync.RWMutex
@@ -45,15 +44,13 @@ type FSM struct {
 // 该事件可以有一个或多个对执行有效的源状态过渡。
 // 如果 FSM 处于源状态之一，它将最终处于指定的目标状态，调用所有已定义的回调。
 type EventDesc struct {
-	// Name is the event name used when calling for a transition.
+	// Name 是调用转换时使用的事件名称。
 	Name string
 
-	// Src is a slice of source states that the FSM must be in to perform a
-	// state transition.
+	// Src 是 FSM 必须处于其中才能执行状态转换的源状态的一部分。
 	Src []string
 
-	// Dst is the destination state that the FSM will be in if the transition
-	// succeeds.
+	// Dst 是转换成功后 FSM 将处于的目标状态。
 	Dst string
 }
 
@@ -107,7 +104,7 @@ func NewFSM(initial string, events []EventDesc, callbacks map[string]Callback) *
 		metadata:        make(map[string]interface{}),
 	}
 
-	// Build transition map and store sets of all events and states.
+	// 构建转换映射并存储所有事件和状态的集合。
 	allEvents := make(map[string]bool)
 	allStates := make(map[string]bool)
 	for _, e := range events {
@@ -119,7 +116,7 @@ func NewFSM(initial string, events []EventDesc, callbacks map[string]Callback) *
 		allEvents[e.Name] = true
 	}
 
-	// Map all callbacks to events/states.
+	// 将所有回调映射到事件/状态。
 	for name, fn := range callbacks {
 		var target string
 		var callbackType int
@@ -174,29 +171,29 @@ func NewFSM(initial string, events []EventDesc, callbacks map[string]Callback) *
 	return f
 }
 
-// Current returns the current state of the FSM.
+// Current 返回 FSM 的当前状态。
 func (f *FSM) Current() string {
 	f.stateMu.RLock()
 	defer f.stateMu.RUnlock()
 	return f.current
 }
 
-// Is returns true if state is the current state.
+// Is 如果状态是当前状态，则返回 true。
 func (f *FSM) Is(state string) bool {
 	f.stateMu.RLock()
 	defer f.stateMu.RUnlock()
 	return state == f.current
 }
 
-// SetState allows the user to move to the given state from current state.
-// The call does not trigger any callbacks, if defined.
+// SetState 允许用户从当前状态移动到给定状态。
+// 调用不会触发任何回调（如果已定义）。
 func (f *FSM) SetState(state string) {
 	f.stateMu.Lock()
 	defer f.stateMu.Unlock()
 	f.current = state
 }
 
-// Can returns true if event can occur in the current state.
+// Can 如果事件可以在当前状态下发生，则返回 true。
 func (f *FSM) Can(event string) bool {
 	f.stateMu.RLock()
 	defer f.stateMu.RUnlock()
@@ -204,8 +201,7 @@ func (f *FSM) Can(event string) bool {
 	return ok && (f.transition == nil)
 }
 
-// AvailableTransitions returns a list of transitions available in the
-// current state.
+// AvailableTransitions 可用转换返回当前状态下可用的转换列表。
 func (f *FSM) AvailableTransitions() []string {
 	f.stateMu.RLock()
 	defer f.stateMu.RUnlock()
@@ -218,13 +214,13 @@ func (f *FSM) AvailableTransitions() []string {
 	return transitions
 }
 
-// Cannot returns true if event can not occur in the current state.
-// It is a convenience method to help code read nicely.
+// Cannot 如果事件在当前状态下无法发生，则无法返回 true。
+// 这是一种帮助代码很好地阅读的便捷方法。
 func (f *FSM) Cannot(event string) bool {
 	return !f.Can(event)
 }
 
-// Metadata returns the value stored in metadata
+// Metadata 返回存储在元数据中的值
 func (f *FSM) Metadata(key string) (interface{}, bool) {
 	f.metadataMu.RLock()
 	defer f.metadataMu.RUnlock()
@@ -232,7 +228,7 @@ func (f *FSM) Metadata(key string) (interface{}, bool) {
 	return dataElement, ok
 }
 
-// SetMetadata stores the dataValue in metadata indexing it with key
+// SetMetadata 将数据值存储在元数据中，并使用键对其进行索引
 func (f *FSM) SetMetadata(key string, dataValue interface{}) {
 	f.metadataMu.Lock()
 	defer f.metadataMu.Unlock()
@@ -287,7 +283,7 @@ func (f *FSM) Event(event string, args ...interface{}) error {
 		return NoTransitionError{e.Err}
 	}
 
-	// Setup the transition, call it later.
+	// 设置过期，稍后调用。
 	f.transition = func() {
 		f.stateMu.Lock()
 		f.current = dst
@@ -304,7 +300,7 @@ func (f *FSM) Event(event string, args ...interface{}) error {
 		return err
 	}
 
-	// Perform the rest of the transition, if not asynchronous.
+	// 执行转换的其余部分（如果不是异步）。
 	f.stateMu.RUnlock()
 	defer f.stateMu.RLock()
 	err = f.doTransition()
@@ -315,14 +311,14 @@ func (f *FSM) Event(event string, args ...interface{}) error {
 	return e.Err
 }
 
-// Transition wraps transitioner.transition.
+// Transition transitioner.transition 加锁封装。
 func (f *FSM) Transition() error {
 	f.eventMu.Lock()
 	defer f.eventMu.Unlock()
 	return f.doTransition()
 }
 
-// doTransition wraps transitioner.transition.
+// doTransition transitioner.transition 封装。
 func (f *FSM) doTransition() error {
 	return f.transitionerObj.transition(f)
 }
@@ -342,8 +338,7 @@ func (t transitionerStruct) transition(f *FSM) error {
 	return nil
 }
 
-// beforeEventCallbacks calls the before_ callbacks, first the named then the
-// general version.
+// beforeEventCallbacks 调用 before_ 回调，首先命名，然后是通用版本。
 func (f *FSM) beforeEventCallbacks(e *Event) error {
 	if fn, ok := f.callbacks[cKey{e.Event, callbackBeforeEvent}]; ok {
 		fn(e)
@@ -360,8 +355,7 @@ func (f *FSM) beforeEventCallbacks(e *Event) error {
 	return nil
 }
 
-// leaveStateCallbacks calls the leave_ callbacks, first the named then the
-// general version.
+// leaveStateCallbacks 调用 leave_ 回调，首先命名，然后是通用版本。
 func (f *FSM) leaveStateCallbacks(e *Event) error {
 	if fn, ok := f.callbacks[cKey{f.current, callbackLeaveState}]; ok {
 		fn(e)
@@ -382,8 +376,7 @@ func (f *FSM) leaveStateCallbacks(e *Event) error {
 	return nil
 }
 
-// enterStateCallbacks calls the enter_ callbacks, first the named then the
-// general version.
+// enterStateCallbacks 调用 enter_ 回调，首先命名，然后是通用版本。
 func (f *FSM) enterStateCallbacks(e *Event) {
 	if fn, ok := f.callbacks[cKey{f.current, callbackEnterState}]; ok {
 		fn(e)
@@ -393,8 +386,7 @@ func (f *FSM) enterStateCallbacks(e *Event) {
 	}
 }
 
-// afterEventCallbacks calls the after_ callbacks, first the named then the
-// general version.
+// afterEventCallbacks 调用 after_ 回调，首先命名，然后是通用版本。
 func (f *FSM) afterEventCallbacks(e *Event) {
 	if fn, ok := f.callbacks[cKey{e.Event, callbackAfterEvent}]; ok {
 		fn(e)
@@ -412,22 +404,22 @@ const (
 	callbackAfterEvent
 )
 
-// cKey is a struct key used for keeping the callbacks mapped to a target.
+// cKey 是一个结构键，用于保持回调映射到目标。
 type cKey struct {
-	// target is either the name of a state or an event depending on which
-	// callback type the key refers to. It can also be "" for a non-targeted
-	// callback like before_event.
+	// target 是一个州或一个事件的名称，具体取决于哪个
+	// 键引用的回调类型。对于非目标，它也可以是""
+	// 像before_event一样回调。
 	target string
 
-	// callbackType is the situation when the callback will be run.
+	// callbackType 是运行回调的情况。
 	callbackType int
 }
 
-// eKey is a struct key used for storing the transition map.
+// eKey 是用于存储转换映射的结构键。
 type eKey struct {
-	// event is the name of the event that the keys refers to.
+	// event 事件名，。
 	event string
 
-	// src is the source from where the event can transition.
+	// src 事件可以从哪转换。
 	src string
 }
