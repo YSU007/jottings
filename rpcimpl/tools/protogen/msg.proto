@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package proto;
+
+/*
+  PROTO_NUM:1
+  RPC_NAME:Hello
+  REQ_NAME:HelloReq
+  RSP_NAME:HelloRsp
+*/
+message HelloReq  {
+  string HelloMsg = 1;
+}
+message HelloRsp  {
+  string ReplyMsg = 1;
+}
