@@ -28,18 +28,18 @@ func (o *OperationMultiply) DoOperation(num1 int, num2 int) int {
 	return num1 * num2
 }
 
-// Context 是一个使用了某种策略的类
-type Context struct {
+// Context14 是一个使用了某种策略的类
+type Context14 struct {
 	strategy Strategy
 }
 
-func NewContext(strategy Strategy) *Context {
-	return &Context{
+func NewContext(strategy Strategy) *Context14 {
+	return &Context14{
 		strategy: strategy,
 	}
 }
 
-func (c *Context) ExecuteStrategy(num1 int, num2 int) int {
+func (c *Context14) ExecuteStrategy(num1 int, num2 int) int {
 	return c.strategy.DoOperation(num1, num2)
 }
 
