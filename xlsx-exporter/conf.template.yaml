@@ -1,0 +1,121 @@
+package: "GameData"
+channel: "" #导出渠道, 可以根据渠道导出不同的数据
+pb_bytes_file_ext: ".bytes" #unity must use .bytes extension, cocoscreator use .bin
+comment_symbol: "#"
+export_type: 4 #全局导出类型设置，1-all,2-client,3-server,4-ignore-不支持此行
+array_split_char: "," #默认数组分割符号
+pause_on_end: false # 运行完毕后是否暂停
+strict_mode: false # 是否严格模式,如：int配置为空时，严格模式将会报错，非严格模式默认为0
+rules: #数据规则，可在字段类型后加入规则id,在数据导出时进行规则检测，严格模式会中断输出，否则只进行日志提示
+
+sheets:
+ -
+  id: 1
+  type: define #type: define/table/language
+  file: 'data/define.xlsx'
+  sheet: 'define'
+ -
+  id: 2
+  type: define
+  file: 'data/define.xlsx'
+  sheet: 'consts'
+ - 
+  id: 3
+  type: table
+  file: 'data/model.xlsx'
+  sheet: 'class'
+  type_name: 'PClass'
+ - 
+  id: 4
+  type: table
+  file: 'data/model.xlsx'
+  sheet: 'class1'
+  type_name: 'PClass'
+ - 
+  id: 5
+  type: table
+  file: 'data/model.xlsx'
+  sheet: 'user'
+  type_name: 'User'
+ - 
+  id: 6
+  type: table
+  file: 'data/i18n.xlsx'
+  sheet: 'location1'
+  is_lang: true
+ - 
+  id: 7
+  type: table
+  file: 'data/i18n.xlsx'
+  sheet: 'location2'
+  is_lang: true
+
+exports:
+-
+ id: 1
+ type: "proto"
+ path: "./gen/code/all_proto.proto"
+ sheets: "" #导出表id集合，不设置为导出所有表，逗号分割表示数组，如：1,2,3，横杠分割表示范围,如：1-7，可混用如：1,2-4,6-7
+ export_type: 1 #单项导出类型设置，1-ignore,2-client,3-server
+-
+ id: 2
+ type: "golang"
+ path: "./gen/code/data_model.pb.go"
+ sheets: "1,3-7"
+ export_type: 1
+ package: "game_data"
+-
+ id: 3
+ type: "proto_bytes"
+ path: "./gen/data/"
+ export_type: 1
+-
+ id: 4
+ type: "csharp"
+ path: "./gen/code/DataModel.cs"
+ sheets: ""
+ package: "Cfg"
+-
+ id: 5
+ type: "charset"
+ path: "./gen/data/lang.txt"
+-
+ id: 6
+ type: "js,dts"
+ path: "./gen/code/data_mode.js,./gen/code/data_mode.d.ts"
+ imports:
+  - "import UserData from './userdata'"
+  - "import XXX from './xxx'"
+-
+ id: 7
+ type: "dts"
+ path: "./gen/code/data_mode.d.ts"
+-
+ id: 8
+ type: "ts"
+ path: "./gen/code/data_mode.ts"
+-
+ id: 10
+ type: "csharp"
+ path: "./gen/code/Message.cs"
+ package: "Message"
+-
+ id: 11
+ type: "golang"
+ path: "./gen/code/message.go"
+ package: "Message"
+-
+ id: 12
+ type: "json"
+ path: "./gen/data/json/"
+ excludes: "5"
+-
+ id: 13
+ type: "custom"
+ path: "./gen/data/json/CustomTest/all.csv"
+ template: "./template/data-gen.lua"
+-
+ id: 14
+ type: "custom"
+ path: "./gen/data/json/CustomTest/all.d.ts"
+ template: "./template/dts-gen.lua"
